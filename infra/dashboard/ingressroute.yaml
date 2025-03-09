@@ -1,0 +1,15 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  namespace: kubernetes-dashboard
+  name: kubernetes-dashboard-ingress
+spec:
+  entryPoints:
+  - web
+  routes:
+  - kind: Rule
+    match: Host(`dashboard.pi-master-1.local`)
+    priority: 10
+    services:
+    - name: kubernetes-dashboard-web
+      port: 8000
