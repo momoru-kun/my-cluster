@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-acme
+  namespace: traefik
+spec:
+  secretName: {{ .Release.Name }}-tls
+  dnsNames:
+    - "home.cybercarlitos.xyz"
+  issuerRef:
+    name: acme
+    kind: Issuer

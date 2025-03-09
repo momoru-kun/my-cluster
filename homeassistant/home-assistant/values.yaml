@@ -1,0 +1,3 @@
+replicaCount: 2
+hostname: localdomain.local
+external_hostname: example.com

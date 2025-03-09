@@ -1,0 +1,33 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Name }}-internal
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - web
+  routes:
+  - kind: Rule
+    match: Host(`home.{{ .Values.hostname }}`)
+    priority: 10
+    services:
+      - name: {{ .Release.Name }}
+        port: 8123
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Name }}-external
+  namespace: {{ .Release.Namespace }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - kind: Rule
+    match: Host(`home.{{ .Values.external_hostname }}`)
+    priority: 10
+    services:
+      - name: {{ .Release.Name }}
+        port: 8123
+  tls:
+    - secretName: {{ .Release.Name }}-tls
