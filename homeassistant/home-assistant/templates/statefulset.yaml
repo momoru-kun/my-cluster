@@ -52,14 +52,11 @@ spec:
           timeoutSeconds: 1
         resources:
         env:
-          - name: TZ
+        - name: TZ
           value: Europe/Moscow
         volumeMounts:
-          - mountPath: /config
-            name: {{ .Release.Name }}-data
-    - name: config-volume
-    configMap:
-      name: hass-configuration
+        - mountPath: /config
+          name: {{ .Release.Name }}-data
   volumeClaimTemplates:
   - metadata:
       name: {{ .Release.Name }}-data
