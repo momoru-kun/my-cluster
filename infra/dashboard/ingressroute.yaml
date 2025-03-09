@@ -11,5 +11,5 @@ spec:
     match: Host(`dashboard.pi-master-1.local`)
     priority: 10
     services:
-    - name: kubernetes-dashboard-web
-      port: 8000
+    - name: kubernetes-dashboard
+      port: 443
