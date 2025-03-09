@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{ .Release.Name }}
   labels:
@@ -57,14 +57,8 @@ spec:
           value: Europe/Moscow
         volumeMounts:
         - mountPath: /config
-          name: {{ .Release.Name }}-data
-  volumeClaimTemplates:
-  - metadata:
-      name: {{ .Release.Name }}-data
-    spec:
-      accessModes:
-      - "ReadWriteMany"
-      storageClassName: longhorn-default
-      resources:
-        requests:
-          storage: 10Gi
+          name: hass-data
+      volumes:
+      - name: hass-data
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}
