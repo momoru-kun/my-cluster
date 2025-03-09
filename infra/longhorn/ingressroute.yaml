@@ -1,0 +1,15 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: longhorn-ingress
+  namespace: longhorn-system
+spec:
+  entryPoints:
+    - web
+  routes:
+  - kind: Rule
+    match: Host(`longhorn.pi-master-1.local`)
+    priority: 10
+    services:
+      - name: longhorn-frontend
+        port: 80
