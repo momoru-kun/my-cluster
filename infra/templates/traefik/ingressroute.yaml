@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: IngressRoute
+metadata:
+  name: traefik-ingress
+  namespace: kube-system
+spec:
+  entryPoints:
+    - web
+    - webSecure
+  routes:
+  - kind: Rule
+    match: Host(`traefik.{{ .Values.baseDomain }}`)
+    priority: 10
+    services:
+    - name: traefik-dashboard
+      port: 9000

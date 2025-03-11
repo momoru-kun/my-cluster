@@ -1,0 +1,27 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  namespace: kubernetes-dashboard
+  name: kubernetes-dashboard-ingress
+  labels:
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`dashboard.{{ .Values.baseDomain }}``) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    services:
+    - name: kubernetes-dashboard-app-api
+      port: 8000
+  - kind: Rule
+    match: Host(`dashboard.{{ .Values.baseDomain }}`) && (PathPrefix(`/`))
+    services:
+    - name: kubernetes-dashboard-app-web
+      port: 8000
+  - kind: Rule
+    match: Host(`dashboard.{{ .Values.baseDomain }}`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
+    services:
+    - name: kubernetes-dashboard-app-auth
+      port: 8000
+  tls:
+    secretName: dashboard-internal-tls

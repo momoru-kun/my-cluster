@@ -1,0 +1,7 @@
+baseDomain: example.com
+useSelfSigned: false
+createDashboardToken: true
+
+metalLB:
+  ipPool:
+    - 10.0.0.1/32

@@ -6,10 +6,13 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
   - kind: Rule
-    match: Host(`argocd.pi-master-1.local`)
+    match: Host(`argocd.{{ .Values.baseDomain }}`)
     priority: 10
     services:
       - name: argocd-server
         port: 80
+  tls:
+    secretName: argocd-internal-tls

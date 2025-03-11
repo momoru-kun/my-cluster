@@ -8,7 +8,7 @@ spec:
     - web
   routes:
   - kind: Rule
-    match: Host(`longhorn.pi-master-1.local`)
+    match: Host(`longhorn.{{ .Values.baseDomain }}`)
     priority: 10
     services:
       - name: longhorn-frontend

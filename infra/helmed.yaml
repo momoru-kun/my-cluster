@@ -1,0 +1,471 @@
+---
+# Source: infra-chart/templates/localpath/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+---
+# Source: infra-chart/templates/dashboard/sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+# Source: infra-chart/templates/localpath/sa.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-path-provisioner-service-account
+  namespace: local-path-storage
+---
+# Source: infra-chart/templates/dashboard/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-token
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/service-account.name: admin-user
+type: kubernetes.io/service-account-token
+---
+# Source: infra-chart/templates/argocd/cmd-params-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  server.insecure: "true"
+---
+# Source: infra-chart/templates/localpath/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: local-path-config
+  namespace: local-path-storage
+data:
+  config.json: |-
+    {
+      "nodePathMap":[
+        {
+                "node":"DEFAULT_PATH_FOR_NON_LISTED_NODES",
+                "paths":["/opt/local-path-provisioner"]
+        },
+        {
+          "node": "pi-master",
+          "paths": [ "/opt/local-path-provisioner" ]
+        }
+      ]
+    }
+  setup: |-
+    #!/bin/sh
+    set -eu
+    mkdir -m 0777 -p "$VOL_DIR"
+  teardown: |-
+    #!/bin/sh
+    set -eu
+    rm -rf "$VOL_DIR"
+  helperPod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: helper-pod
+    spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: node.kubernetes.io/disk-pressure
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: helper-pod
+        image: busybox
+        imagePullPolicy: IfNotPresent
+---
+# Source: infra-chart/templates/localpath/storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+---
+# Source: infra-chart/templates/longhorn/storageclass.yml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  name: longhorn-default
+allowVolumeExpansion: true
+parameters:
+  nodeSelector: "storage"
+  dataEngine: v1
+  dataLocality: disabled
+  disableRevisionCounter: "true"
+  fromBackup: ""
+  fsType: ext4
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  unmapMarkSnapChainRemoved: ignored
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+# Source: infra-chart/templates/localpath/role_binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: local-path-provisioner-role
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumeclaims", "configmaps", "pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+---
+# Source: infra-chart/templates/dashboard/crb.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+# Source: infra-chart/templates/localpath/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: local-path-provisioner-bind
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: local-path-provisioner-role
+subjects:
+  - kind: ServiceAccount
+    name: local-path-provisioner-service-account
+    namespace: local-path-storage
+---
+# Source: infra-chart/templates/localpath/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: local-path-provisioner-role
+  namespace: local-path-storage
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+---
+# Source: infra-chart/templates/traefik/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-dashboard
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/instance: traefik
+    app.kubernetes.io/name: traefik-dashboard
+spec:
+  type: ClusterIP
+  ports:
+  - name: traefik
+    port: 9000
+    targetPort: traefik
+    protocol: TCP
+  selector:
+    app.kubernetes.io/instance: traefik-kube-system
+    app.kubernetes.io/name: traefik
+---
+# Source: infra-chart/templates/localpath/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-path-provisioner
+  namespace: local-path-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-path-provisioner
+  template:
+    metadata:
+      labels:
+        app: local-path-provisioner
+    spec:
+      serviceAccountName: local-path-provisioner-service-account
+      containers:
+        - name: local-path-provisioner
+          image: rancher/local-path-provisioner:v0.0.31
+          imagePullPolicy: IfNotPresent
+          command:
+            - local-path-provisioner
+            - --debug
+            - start
+            - --config
+            - /etc/config/config.json
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config/
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_MOUNT_PATH
+              value: /etc/config/
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config-volume
+          configMap:
+            name: local-path-config
+---
+# Source: infra-chart/templates/argocd/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-internal-tls
+  namespace: argocd
+spec:
+  secretName: -tls
+  dnsNames:
+    - "argocd.int.cybercarlitos.xyz"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+---
+# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tinfoilcipher-root-ca-cert
+  namespace: cert-manager
+spec:
+  isCA: true
+  duration: 87600h
+  commonName: root-ca.tinfoilcipher.co.uk
+  secretName: root-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+# Source: infra-chart/templates/dashboard/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dashboard-internal-tls
+  namespace: traefik
+spec:
+  secretName: -tls
+  dnsNames:
+    - "dashboard.int.cybercarlitos.xyz"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+---
+# Source: infra-chart/templates/longhorn/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-internal-tls
+  namespace: longhorn-system
+spec:
+  secretName: -tls
+  dnsNames:
+    - "longhorn.int.cybercarlitos.xyz"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+---
+# Source: infra-chart/templates/traefik/certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-internal-tls
+  namespace: argocd
+spec:
+  secretName: -tls
+  dnsNames:
+    - "argocd.int.cybercarlitos.xyz"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+---
+# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: acme-stagging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: acme-stagging
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+---
+# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: acme
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: acme
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+---
+# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ca-issuer
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: root-ca-secret
+---
+# Source: infra-chart/templates/metallb/ipaddresspool.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: main-ip
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.88.237/32
+---
+# Source: infra-chart/templates/argocd/ingressroute.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+  - kind: Rule
+    match: Host(`argocd.int.cybercarlitos.xyz`)
+    priority: 10
+    services:
+      - name: argocd-server
+        port: 80
+  tls:
+    secretName: argocd-internal-tls
+---
+# Source: infra-chart/templates/dashboard/ingressroute.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  namespace: kubernetes-dashboard
+  name: kubernetes-dashboard-ingress
+  labels:
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`dashboard.int.cybercarlitos.xyz) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    services:
+    - name: kubernetes-dashboard-app-api
+      port: 8000
+  - kind: Rule
+    match: Host(`dashboard.int.cybercarlitos.xyz`) && (PathPrefix(`/`))
+    services:
+    - name: kubernetes-dashboard-app-web
+      port: 8000
+  - kind: Rule
+    match: Host(`dashboard.int.cybercarlitos.xyz`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
+    services:
+    - name: kubernetes-dashboard-app-auth
+      port: 8000
+  tls:
+    secretName: dashboard-internal-tls
+---
+# Source: infra-chart/templates/longhorn/ingressroute.yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: longhorn-ingress
+  namespace: longhorn-system
+spec:
+  entryPoints:
+    - web
+  routes:
+  - kind: Rule
+    match: Host(`longhorn.int.cybercarlitos.xyz`)
+    priority: 10
+    services:
+      - name: longhorn-frontend
+        port: 80
+---
+# Source: infra-chart/templates/traefik/ingressroute.yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressRoute
+metadata:
+  name: traefik-ingress
+  namespace: kube-system
+spec:
+  entryPoints:
+    - web
+    - webSecure
+  routes:
+  - kind: Rule
+    match: Host(`traefik.int.cybercarlitos.xyz`)
+    priority: 10
+    services:
+    - name: traefik-dashboard
+      port: 9000
+---
+# Source: infra-chart/templates/metallb/l2advertisment.yaml
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: example
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+  - main-ip

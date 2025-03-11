@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-internal-tls
+  namespace: longhorn-system
+spec:
+  secretName: -tls
+  dnsNames:
+    - "longhorn.{{ .Values.baseDomain }}"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer

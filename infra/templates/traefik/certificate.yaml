@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-internal-tls
+  namespace: argocd
+spec:
+  secretName: -tls
+  dnsNames:
+    - "argocd.{{ .Values.baseDomain }}"
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
