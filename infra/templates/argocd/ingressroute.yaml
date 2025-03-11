@@ -11,6 +11,11 @@ spec:
   - kind: Rule
     match: Host(`argocd.{{ .Values.baseDomain }}`)
     priority: 10
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
       - name: argocd-server
         port: 80

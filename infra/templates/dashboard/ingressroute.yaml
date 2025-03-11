@@ -10,16 +10,31 @@ spec:
   routes:
   - kind: Rule
     match: Host(`dashboard.{{ .Values.baseDomain }}``) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-api
       port: 8000
   - kind: Rule
     match: Host(`dashboard.{{ .Values.baseDomain }}`) && (PathPrefix(`/`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-web
       port: 8000
   - kind: Rule
     match: Host(`dashboard.{{ .Values.baseDomain }}`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-auth
       port: 8000

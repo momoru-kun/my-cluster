@@ -5,3 +5,9 @@ createDashboardToken: true
 metalLB:
   ipPool:
     - 10.0.0.1/32
+
+traefik:
+  localIPWhiteList:
+    - 127.0.0.1/32
+    - 192.168.88.0/24
+    - 10.8.0.0/24

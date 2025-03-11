@@ -1,0 +1,21 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: internal-whitelist
+  namespace: kube-system
+spec:
+  ipWhiteList:
+    sourceRange:
+    {{- range .Values.traefik.localIPWhiteList }}
+      - {{ . }}
+    {{- end }}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: kube-system
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true

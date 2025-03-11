@@ -252,9 +252,9 @@ metadata:
 spec:
   secretName: -tls
   dnsNames:
-    - "argocd.int.cybercarlitos.xyz"
+    - "argocd.example.com"
   issuerRef:
-    name: ca-issuer
+    name: acme
     kind: ClusterIssuer
 ---
 # Source: infra-chart/templates/certmanager/clusterissuer.yaml
@@ -285,7 +285,7 @@ metadata:
 spec:
   secretName: -tls
   dnsNames:
-    - "dashboard.int.cybercarlitos.xyz"
+    - "dashboard.example.com"
   issuerRef:
     name: ca-issuer
     kind: ClusterIssuer
@@ -299,7 +299,7 @@ metadata:
 spec:
   secretName: -tls
   dnsNames:
-    - "longhorn.int.cybercarlitos.xyz"
+    - "longhorn.example.com"
   issuerRef:
     name: ca-issuer
     kind: ClusterIssuer
@@ -308,12 +308,12 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: argocd-internal-tls
-  namespace: argocd
+  name: traefik-internal-tls
+  namespace: kube-system
 spec:
   secretName: -tls
   dnsNames:
-    - "argocd.int.cybercarlitos.xyz"
+    - "traefik.example.com"
   issuerRef:
     name: ca-issuer
     kind: ClusterIssuer
@@ -374,7 +374,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.88.237/32
+    - 10.0.0.1/32
 ---
 # Source: infra-chart/templates/argocd/ingressroute.yaml
 apiVersion: traefik.io/v1alpha1
@@ -388,7 +388,7 @@ spec:
     - websecure
   routes:
   - kind: Rule
-    match: Host(`argocd.int.cybercarlitos.xyz`)
+    match: Host(`argocd.example.com`)
     priority: 10
     services:
       - name: argocd-server
@@ -408,17 +408,17 @@ spec:
   - websecure
   routes:
   - kind: Rule
-    match: Host(`dashboard.int.cybercarlitos.xyz) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    match: Host(`dashboard.example.com``) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
     services:
     - name: kubernetes-dashboard-app-api
       port: 8000
   - kind: Rule
-    match: Host(`dashboard.int.cybercarlitos.xyz`) && (PathPrefix(`/`))
+    match: Host(`dashboard.example.com`) && (PathPrefix(`/`))
     services:
     - name: kubernetes-dashboard-app-web
       port: 8000
   - kind: Rule
-    match: Host(`dashboard.int.cybercarlitos.xyz`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
+    match: Host(`dashboard.example.com`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
     services:
     - name: kubernetes-dashboard-app-auth
       port: 8000
@@ -436,7 +436,7 @@ spec:
     - web
   routes:
   - kind: Rule
-    match: Host(`longhorn.int.cybercarlitos.xyz`)
+    match: Host(`longhorn.example.com`)
     priority: 10
     services:
       - name: longhorn-frontend
@@ -454,7 +454,7 @@ spec:
     - webSecure
   routes:
   - kind: Rule
-    match: Host(`traefik.int.cybercarlitos.xyz`)
+    match: Host(`traefik.example.com`)
     priority: 10
     services:
     - name: traefik-dashboard
@@ -469,3 +469,16 @@ metadata:
 spec:
   ipAddressPools:
   - main-ip
+---
+# Source: infra-chart/templates/traefik/middleware.yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: whitelist-middleware
+  namespace: kube-system
+spec:
+  ipWhiteList:
+    sourceRange:
+      - 127.0.0.1/32
+      - 192.168.88.0/24
+      - 10.8.0.0/24

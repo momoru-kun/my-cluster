@@ -6,10 +6,15 @@ metadata:
 spec:
   entryPoints:
     - web
-    - webSecure
+    - websecure
   routes:
   - kind: Rule
     match: Host(`traefik.{{ .Values.baseDomain }}`)
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     priority: 10
     services:
     - name: traefik-dashboard
