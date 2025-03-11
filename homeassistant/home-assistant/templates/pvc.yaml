@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- if .Values.longhorn.enabled }}
-    recurring-job.longhorn.io/{{ .Release.Name }}-{{ .Values.longhorn.backups.job_name }}: enabled
+    recurring-job-group.longhorn.io/{{ .Values.longhorn.backups.group }}: enabled
     recurring-job-group.longhorn.io/default: disabled
     {{- end }}
 spec:

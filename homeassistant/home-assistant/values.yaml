@@ -5,5 +5,5 @@ external_hostname: example.com
 longhorn:
   enabled: true
   backups:
-    job_name: hass
+    group: hass
     interval: 0 3 * * 1
