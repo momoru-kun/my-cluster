@@ -1,0 +1,15 @@
+{{- if .Values.longhorn.enabled }}
+apiVersion: longhorn.io/v1beta1
+kind: RecurringJob
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.longhorn.backups.job_name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  cron: {{ .Values.longhorn.backups.interval | quote }}
+  task: "backup"
+  full-backup-interval: 4
+  retain: 1
+  concurrency: 2
+  labels:
+    backup.longhorn.io/instance={{ .Release.Name }}
+{{- end }}

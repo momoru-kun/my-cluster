@@ -1,3 +1,9 @@
-replicaCount: 2
+replicaCount: 1
 hostname: localdomain.local
 external_hostname: example.com
+
+longhorn:
+  enabled: true
+  backups:
+    job_name: hass
+    interval: 0 3 * * 1

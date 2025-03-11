@@ -3,10 +3,19 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- if .Values.longhorn.enabled }}
+    recurring-job.longhorn.io/{{ .Release.Name }}-{{ .Values.longhorn.backups.job_name }}: enabled
+    recurring-job-group.longhorn.io/default: disabled
+    {{- end }}
 spec:
   accessModes:
   - "ReadWriteMany"
+  {{- if .Values.longhorn.enabled }}
   storageClassName: longhorn-default
+  {{- else }}
+  storageClassName: local-path
+  {{- end }}
   resources:
     requests:
       storage: 10Gi
