@@ -39,4 +39,4 @@ spec:
     - name: kubernetes-dashboard-app-auth
       port: 8000
   tls:
-    secretName: dashboard-internal-tls
+    secretName: kubernetes-dashboard-tls

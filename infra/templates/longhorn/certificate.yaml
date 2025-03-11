@@ -1,7 +1,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: argocd-internal-tls
+  name: longhorn-internal-tls
   namespace: longhorn-system
 spec:
   secretName: longhorn-dashboard-tls

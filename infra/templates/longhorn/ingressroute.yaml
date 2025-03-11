@@ -6,6 +6,7 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
   - kind: Rule
     match: Host(`longhorn.{{ .Values.baseDomain }}`)
@@ -18,3 +19,5 @@ spec:
     services:
       - name: longhorn-frontend
         port: 80
+  tls:
+    secretName: longhorn-dashboard-tls
