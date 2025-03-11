@@ -4,7 +4,7 @@ metadata:
   name: traefik-internal-tls
   namespace: kube-system
 spec:
-  secretName: -tls
+  secretName: traefik-dashboard-tls
   dnsNames:
     - "traefik.{{ .Values.baseDomain }}"
   issuerRef:

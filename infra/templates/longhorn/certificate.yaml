@@ -4,7 +4,7 @@ metadata:
   name: argocd-internal-tls
   namespace: longhorn-system
 spec:
-  secretName: -tls
+  secretName: longhorn-dashboard-tls
   dnsNames:
     - "longhorn.{{ .Values.baseDomain }}"
   issuerRef:

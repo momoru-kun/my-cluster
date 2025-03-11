@@ -4,7 +4,7 @@ metadata:
   name: dashboard-internal-tls
   namespace: traefik
 spec:
-  secretName: -tls
+  secretName: kubernetes-dashboard-tls
   dnsNames:
     - "dashboard.{{ .Values.baseDomain }}"
   issuerRef:

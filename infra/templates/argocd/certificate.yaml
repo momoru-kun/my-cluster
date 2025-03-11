@@ -4,7 +4,7 @@ metadata:
   name: argocd-internal-tls
   namespace: argocd
 spec:
-  secretName: -tls
+  secretName: argocd-tls
   dnsNames:
     - "argocd.{{ .Values.baseDomain }}"
   issuerRef:
