@@ -9,7 +9,7 @@ spec:
   - websecure
   routes:
   - kind: Rule
-    match: Host(`dashboard.{{ .Values.baseDomain }}``) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    match: Host(`dashboard.{{ .Values.baseDomain }}`) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
     middlewares:
       - name: internal-whitelist
         namespace: kube-system
