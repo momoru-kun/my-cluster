@@ -1,0 +1,10 @@
+{{- if .Values.certManager.pki.enabled }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ca-issuer
+  namespace: cert-manager
+spec:
+  ca:
+    secretName: {{ .Values.certManager.pki.caCertCommonName }}
+{{- end }}

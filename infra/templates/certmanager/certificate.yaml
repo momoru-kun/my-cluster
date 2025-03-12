@@ -1,0 +1,22 @@
+{{- if .Values.certManager.pki.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pki-root-ca-cert
+  namespace: cert-manager
+spec:
+  isCA: true
+  duration: 87600h
+  commonName: {{ .Values.certManager.pki.caCertCommonName }}
+  secretName: {{ .Values.certManager.pki.caCertCommonName }}
+  subject:
+    organizations:
+      - {{ .Values.certManager.pki.caOrgName }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+{{- end }}
