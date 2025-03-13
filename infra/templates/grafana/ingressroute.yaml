@@ -19,4 +19,4 @@ spec:
     - name: loki-stack-grafana
       port: 80
   tls:
-    - secretName: grafana-tls
+    secretName: grafana-tls
