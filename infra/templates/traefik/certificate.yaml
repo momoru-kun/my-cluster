@@ -8,5 +8,5 @@ spec:
   dnsNames:
     - "traefik.{{ .Values.baseDomain }}"
   issuerRef:
-    name: ca-issuer
+    name: acme
     kind: ClusterIssuer

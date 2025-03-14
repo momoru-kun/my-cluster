@@ -250,24 +250,27 @@ metadata:
   name: argocd-internal-tls
   namespace: argocd
 spec:
-  secretName: -tls
+  secretName: argocd-tls
   dnsNames:
     - "argocd.example.com"
   issuerRef:
     name: acme
     kind: ClusterIssuer
 ---
-# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+# Source: infra-chart/templates/certmanager/certificate.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: tinfoilcipher-root-ca-cert
+  name: pki-root-ca-cert
   namespace: cert-manager
 spec:
   isCA: true
   duration: 87600h
-  commonName: root-ca.tinfoilcipher.co.uk
-  secretName: root-ca-secret
+  commonName: pki.int.cybercarlitos.xyz
+  secretName: pki.int.cybercarlitos.xyz
+  subject:
+    organizations:
+      - cybercarlitos
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -281,9 +284,9 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: dashboard-internal-tls
-  namespace: traefik
+  namespace: kubernetes-dashboard
 spec:
-  secretName: -tls
+  secretName: kubernetes-dashboard-tls
   dnsNames:
     - "dashboard.example.com"
   issuerRef:
@@ -294,10 +297,10 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: argocd-internal-tls
+  name: longhorn-internal-tls
   namespace: longhorn-system
 spec:
-  secretName: -tls
+  secretName: longhorn-dashboard-tls
   dnsNames:
     - "longhorn.example.com"
   issuerRef:
@@ -311,14 +314,14 @@ metadata:
   name: traefik-internal-tls
   namespace: kube-system
 spec:
-  secretName: -tls
+  secretName: traefik-dashboard-tls
   dnsNames:
     - "traefik.example.com"
   issuerRef:
     name: ca-issuer
     kind: ClusterIssuer
 ---
-# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+# Source: infra-chart/templates/certmanager/clusterissuer-acme-stagging.yaml
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -333,7 +336,7 @@ spec:
           ingress:
             ingressClassName: traefik
 ---
-# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+# Source: infra-chart/templates/certmanager/clusterissuer-acme.yaml
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -348,15 +351,7 @@ spec:
           ingress:
             ingressClassName: traefik
 ---
-# Source: infra-chart/templates/certmanager/clusterissuer.yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: selfsigned-issuer
-spec:
-  selfSigned: {}
----
-# Source: infra-chart/templates/certmanager/clusterissuer.yaml
+# Source: infra-chart/templates/certmanager/clusterissuer-ca.yaml
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -364,7 +359,15 @@ metadata:
   namespace: cert-manager
 spec:
   ca:
-    secretName: root-ca-secret
+    secretName: pki.int.cybercarlitos.xyz
+---
+# Source: infra-chart/templates/certmanager/clusterissuer-selfsigned.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
 ---
 # Source: infra-chart/templates/metallb/ipaddresspool.yaml
 apiVersion: metallb.io/v1beta1
@@ -390,11 +393,16 @@ spec:
   - kind: Rule
     match: Host(`argocd.example.com`)
     priority: 10
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
       - name: argocd-server
         port: 80
   tls:
-    secretName: argocd-internal-tls
+    secretName: argocd-tls
 ---
 # Source: infra-chart/templates/dashboard/ingressroute.yaml
 apiVersion: traefik.io/v1alpha1
@@ -408,22 +416,37 @@ spec:
   - websecure
   routes:
   - kind: Rule
-    match: Host(`dashboard.example.com``) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    match: Host(`dashboard.example.com`) && (PathPrefix(`/api`) || PathPrefix(`/metrics`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-api
       port: 8000
   - kind: Rule
     match: Host(`dashboard.example.com`) && (PathPrefix(`/`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-web
       port: 8000
   - kind: Rule
     match: Host(`dashboard.example.com`) && (Path(`/api/v1/login`) || Path(`/api/v1/csrftoken/login`) || Path(`/api/v1/me`))
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     services:
     - name: kubernetes-dashboard-app-auth
       port: 8000
   tls:
-    secretName: dashboard-internal-tls
+    secretName: kubernetes-dashboard-tls
 ---
 # Source: infra-chart/templates/longhorn/ingressroute.yaml
 apiVersion: traefik.io/v1alpha1
@@ -434,16 +457,24 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
   - kind: Rule
     match: Host(`longhorn.example.com`)
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     priority: 10
     services:
       - name: longhorn-frontend
         port: 80
+  tls:
+    secretName: longhorn-dashboard-tls
 ---
 # Source: infra-chart/templates/traefik/ingressroute.yaml
-apiVersion: networking.k8s.io/v1
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: traefik-ingress
@@ -451,14 +482,21 @@ metadata:
 spec:
   entryPoints:
     - web
-    - webSecure
+    - websecure
   routes:
   - kind: Rule
     match: Host(`traefik.example.com`)
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     priority: 10
     services:
     - name: traefik-dashboard
       port: 9000
+  tls:
+    secretName: traefik-dashboard-tls
 ---
 # Source: infra-chart/templates/metallb/l2advertisment.yaml
 apiVersion: metallb.io/v1beta1
@@ -471,14 +509,39 @@ spec:
   - main-ip
 ---
 # Source: infra-chart/templates/traefik/middleware.yaml
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: whitelist-middleware
+  name: internal-whitelist
   namespace: kube-system
 spec:
-  ipWhiteList:
+  ipAllowList:
     sourceRange:
       - 127.0.0.1/32
       - 192.168.88.0/24
       - 10.8.0.0/24
+---
+# Source: infra-chart/templates/traefik/middleware.yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: kube-system
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+# Source: infra-chart/templates/longhorn/recurringjob.yaml
+apiVersion: longhorn.io/v1beta1
+kind: RecurringJob
+metadata:
+  name: snapshot-default
+  namespace: longhorn-system
+spec:
+  cron: "0 4 1 * *"
+  task: "backup"
+  groups:
+  - default
+  retain: 1
+  concurrency: 2

@@ -8,5 +8,5 @@ spec:
   dnsNames:
     - "dashboard.{{ .Values.baseDomain }}"
   issuerRef:
-    name: ca-issuer
+    name: amce
     kind: ClusterIssuer
