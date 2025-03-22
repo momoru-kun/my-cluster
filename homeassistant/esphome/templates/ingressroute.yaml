@@ -10,6 +10,11 @@ spec:
   routes:
   - kind: Rule
     match: Host(`esphome.{{ .Values.esphome.hostname }}`)
+    middlewares:
+      - name: internal-whitelist
+        namespace: kube-system
+      - name: https-redirect
+        namespace: kube-system
     priority: 10
     services:
       - name: {{ .Release.Name }}
