@@ -2,18 +2,19 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Release.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  revisionHistoryLimit: 3
+  revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ .Release.Name }}
       app.kubernetes.io/instance: {{ .Release.Name }}
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.deployment.replicaCount }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -28,11 +29,11 @@ spec:
     spec:
       containers:
       - name: {{ .Release.Name }}
-        image: ghcr.io/home-assistant/home-assistant:2025.3.1
+        image: {{ .Values.deployment.image }}
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
-          containerPort: 8123
+          containerPort: {{ .Values.service.listenPort }}
           protocol: TCP
         livenessProbe:
           failureThreshold: 3
@@ -55,11 +56,11 @@ spec:
         resources:
         env:
         - name: TZ
-          value: Europe/Moscow
+          value: {{ .Values.esphome.timezone }}
         volumeMounts:
         - mountPath: /config
-          name: hass-data
+          name: esphome-data
       volumes:
-      - name: hass-data
+      - name: esphome-data
         persistentVolumeClaim:
           claimName: {{ .Release.Name }}

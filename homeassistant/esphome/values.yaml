@@ -1,0 +1,11 @@
+esphome:
+  timezone: "Europe/Moscow"
+  hostname: "example.com"
+
+deployment:
+  revisionHistoryLimit: 2
+  replicaCount: 1
+  image: esphome/esphome
+
+service:
+  listenPort: 6053

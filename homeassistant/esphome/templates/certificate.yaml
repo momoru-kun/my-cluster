@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-acme
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ .Release.Name }}-tls
+  dnsNames:
+    - "esphome.{{ .Values.esphome.hostname }}"
+  issuerRef:
+    name: acme
+    kind: Issuer

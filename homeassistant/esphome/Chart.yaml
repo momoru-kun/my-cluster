@@ -1,0 +1,5 @@
+apiVersion: v2
+name: esphome
+description: ESPHome Chart For k8s
+type: application
+version: 0.1.0
